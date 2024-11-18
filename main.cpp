@@ -3,6 +3,10 @@
 #include <windows.h>
 #include <objidl.h>
 #include <gdiplus.h>
+#include <windows.h>
+#include <commdlg.h>
+#include <iostream>
+#include <string>
 using namespace Gdiplus;
 #pragma comment (lib,"Gdiplus.lib")
 #include "framework.h"
@@ -20,6 +24,27 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+std::string OpenFileDialog() {
+    OPENFILENAME ofn;       // Common dialog box structure
+    char szFile[260] = { 0 }; // Buffer for the file name
+
+    // Initialize OPENFILENAME
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL; // If the dialog is attached to a window, provide the handle here
+    ofn.lpstrFile = (LPWSTR)szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = (LPWSTR)"PNG Files\0*.PNG\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1; // Default filter index
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    // Display the Open dialog box
+    if (GetOpenFileName(&ofn) == TRUE) {
+        return std::string(szFile); // Return the selected file path
+    }
+    return ""; // Return an empty string if the user cancels
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -118,6 +143,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
+   HWND LoadImageButton = CreateWindow(
+       L"BUTTON",
+       L"Load Image",
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       10, 10, 100, 100,
+       hWnd,
+       (HMENU)1,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
+       NULL);
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -136,7 +171,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    Image image(L"Grapes.jpg");
+    Image shrek(L"TestImage/shrek.png");
+
 
     switch (message)
     {
@@ -144,6 +180,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             int wmId = LOWORD(wParam);
             // Analyse les sélections de menu :
+
+            if (LOWORD(wParam) == 1)
+            {
+                std::string path = OpenFileDialog();
+            }
             switch (wmId)
             {
             case IDM_ABOUT:
@@ -161,7 +202,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Ajoutez ici le code de dessin qui utilise hdc...
+            Graphics graphics(hdc);
+            graphics.DrawImage(&shrek, 60, 10);
             EndPaint(hWnd, &ps);
         }
         break;
