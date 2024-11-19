@@ -40,8 +40,9 @@ MyImage::MyImage()
 {
 	mImage = nullptr;
     mRect = new Rect(100, 100, 0, 0);
-    x = 100;
-    y = 100;
+    mX = 100;
+    mY = 100;
+    mHasMessageHidden = false;
 }
 
 void MyImage::LoadFromBrowser(HWND hWnd)
@@ -62,7 +63,7 @@ void MyImage::LoadFromBrowser(HWND hWnd)
         delete mRect;
         mRect = nullptr;
     }
-    mRect = new Rect(x, y, mImage->GetWidth(), mImage->GetHeight());
+    mRect = new Rect(mX, mY, mImage->GetWidth(), mImage->GetHeight());
 
     if (!InvalidateRect(hWnd, nullptr, TRUE))
     {
@@ -91,11 +92,11 @@ void MyImage::ScaleImage()
             height++;
         }
     }
-    x = 400 - width / 2;
-    y = 300 - height / 2;
+    mX = 400 - width / 2;
+    mY = 300 - height / 2;
     delete mRect;
     mRect = nullptr;
-    mRect = new Rect(x, y, width, height);
+    mRect = new Rect(mX, mY, width, height);
 }
 
 void MyImage::GrayScale(HWND hWnd)
@@ -137,4 +138,71 @@ void MyImage::InvertImage(HWND hWnd)
     }
 }
 
+void MyImage::FreeLightestBit(int x, int y)
+{
+    Color color;
+    mImage->GetPixel(x, y, &color);
+    int colorIndex = (int)(color.GetBlue());
+    colorIndex &= 254;
+    color.SetValue(Color::MakeARGB(color.GetA(), color.GetR(), color.GetG(), colorIndex));
+    mImage->SetPixel(x, y, color);
+}
 
+void MyImage::WriteOnLightestBit(int x, int y)
+{
+    Color color;
+    mImage->GetPixel(x, y, &color);
+    int colorIndex = (int)(color.GetBlue());
+    colorIndex |= 1;
+    color.SetValue(Color::MakeARGB(color.GetA(), color.GetR(), color.GetG(), colorIndex));
+    mImage->SetPixel(x, y, color);
+}
+
+void MyImage::CryptMessage(HWND hWnd, Message* message)
+{
+    if (!mHasMessageHidden)
+    {
+        mHasMessageHidden = true;
+    }
+    else
+    {
+        return;
+    }
+    int length = message->GetLength();
+    for (int i = 7; i > -1; i--)
+    {
+        FreeLightestBit(7 - i, 0);
+        if (length > (1 << i))
+        {
+            WriteOnLightestBit(7 - i, 0);
+            length -= (1 << i);
+        }
+    }
+    int i = 0;
+    while (i < length)
+    {
+        int x = 0;
+        int y = 1;
+        int characterCode = message->GetCharacterCode(i);
+        for (int i = 7; i > -1; i--)
+        {
+            FreeLightestBit(x, y);
+            if (characterCode > (1 << i))
+            {
+                WriteOnLightestBit(x, y);
+                characterCode -= (1 << i);
+            }
+            x++;
+            if (x > mImage->GetWidth())
+            {
+                x = 0;
+                y++;
+            }
+        }
+        i++;
+    }
+    if (!InvalidateRect(hWnd, nullptr, TRUE))
+    {
+        MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
+    }
+}

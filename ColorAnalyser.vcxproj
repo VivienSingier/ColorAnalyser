@@ -129,12 +129,14 @@
   <ItemGroup>
     <ClInclude Include="ColorAnalyser.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Message.h" />
     <ClInclude Include="MyImage.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Message.cpp" />
     <ClCompile Include="MyImage.cpp" />
   </ItemGroup>
   <ItemGroup>

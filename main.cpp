@@ -154,6 +154,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
        NULL);
 
+   HWND PatateButton = CreateWindow(
+       L"BUTTON",
+       L"PATATE",
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       230, 500, 100, 100,
+       hWnd,
+       (HMENU)4,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
+       NULL);
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -193,6 +203,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == 3)
             {
                 image->InvertImage(hWnd);
+            }
+            if (LOWORD(wParam) == 4)
+            {
+                Message* msg = new Message(L"PATATE");
+                image->CryptMessage(hWnd, msg);
             }
             switch (wmId)
             {
