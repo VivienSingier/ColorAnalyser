@@ -25,25 +25,26 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-std::string OpenFileDialog() {
-    OPENFILENAME ofn;       // Common dialog box structure
-    char szFile[260] = { 0 }; // Buffer for the file name
+std::wstring OpenPngFileDialog() {
+    OPENFILENAMEW ofn;       // Common dialog box structure
+    wchar_t szFile[260] = { 0 }; // Buffer for the file name
+    wchar_t szFilter[] = L"PNG Files\0*.png\0"; // Buffer for the filter string
 
     // Initialize OPENFILENAME
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL; // If the dialog is attached to a window, provide the handle here
-    ofn.lpstrFile = (LPWSTR)szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = (LPWSTR)"PNG Files\0*.PNG\0All Files\0*.*\0";
-    ofn.nFilterIndex = 1; // Default filter index
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    ofn.hwndOwner = NULL; // Replace NULL with your window handle if needed
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile) / sizeof(wchar_t);
+    ofn.lpstrFilter = szFilter; // Assign filter buffer
+    ofn.nFilterIndex = 1;       // Default filter index
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
 
     // Display the Open dialog box
-    if (GetOpenFileName(&ofn) == TRUE) {
-        return std::string(szFile); // Return the selected file path
+    if (GetOpenFileNameW(&ofn) == TRUE) {
+        return std::wstring(szFile); // Return the selected .png file path
     }
-    return ""; // Return an empty string if the user cancels
+    return L""; // Return empty string if no valid file is selected
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -171,7 +172,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    Image shrek(L"TestImage/shrek.png");
+    Image* image = nullptr;
 
 
     switch (message)
@@ -183,7 +184,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             if (LOWORD(wParam) == 1)
             {
-                std::string path = OpenFileDialog();
+                std::wstring path = OpenPngFileDialog();
+                const wchar_t* wcharPath = path.c_str();
+                
+                if (image) {
+                    delete image;
+                    image = nullptr;
+                }
+                image = new Image(wcharPath);
+                if (!image)
+                {
+                    MessageBox(hWnd, L"Failed to load image", L"Load Error", MB_ICONERROR | MB_OK);
+                }
+
+                if (!InvalidateRect(hWnd, nullptr, TRUE))
+                {
+                    MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
+                }
+                
+                MessageBox(hWnd, wcharPath, L"Path", MB_OK);
             }
             switch (wmId)
             {
@@ -202,8 +221,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            Graphics graphics(hdc);
-            graphics.DrawImage(&shrek, 60, 10);
+            if (image)
+            {
+                Graphics graphics(hdc);
+                graphics.DrawImage(image, 60, 10);
+            }
             EndPaint(hWnd, &ps);
         }
         break;
