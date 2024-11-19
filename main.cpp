@@ -1,16 +1,18 @@
 // ColorAnalyser.cpp : Définit le point d'entrée de l'application.
 //
-#include <windows.h>
 #include <objidl.h>
 #include <gdiplus.h>
 #include <windows.h>
 #include <commdlg.h>
 #include <iostream>
 #include <string>
-using namespace Gdiplus;
-#pragma comment (lib,"Gdiplus.lib")
 #include "framework.h"
 #include "ColorAnalyser.h"
+
+#include "MyImage.h"
+
+using namespace Gdiplus;
+#pragma comment (lib,"Gdiplus.lib")
 
 #define MAX_LOADSTRING 100
 
@@ -24,28 +26,6 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-
-std::wstring OpenPngFileDialog() {
-    OPENFILENAMEW ofn;       // Common dialog box structure
-    wchar_t szFile[260] = { 0 }; // Buffer for the file name
-    wchar_t szFilter[] = L"PNG Files\0*.png\0"; // Buffer for the filter string
-
-    // Initialize OPENFILENAME
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL; // Replace NULL with your window handle if needed
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile) / sizeof(wchar_t);
-    ofn.lpstrFilter = szFilter; // Assign filter buffer
-    ofn.nFilterIndex = 1;       // Default filter index
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-
-    // Display the Open dialog box
-    if (GetOpenFileNameW(&ofn) == TRUE) {
-        return std::wstring(szFile); // Return the selected .png file path
-    }
-    return L""; // Return empty string if no valid file is selected
-}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -137,7 +117,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Stocke le handle d'instance dans la variable globale
 
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, 1024, 768, nullptr, nullptr, hInstance, nullptr);
+      CW_USEDEFAULT, 0, 1280, 1024, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -151,6 +131,26 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        10, 10, 100, 100,
        hWnd,
        (HMENU)1,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
+       NULL);
+
+   HWND GrayScaleButton = CreateWindow(
+       L"BUTTON",
+       L"GrayScale",
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       10, 500, 100, 100,
+       hWnd,
+       (HMENU)2,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
+       NULL);
+
+   HWND InvertButton = CreateWindow(
+       L"BUTTON",
+       L"Invert",
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       120, 500, 100, 100,
+       hWnd,
+       (HMENU)3,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
        NULL);
 
@@ -172,8 +172,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    Image* image = nullptr;
-
+    MyImage* image = MyImage::GetInstance();
 
     switch (message)
     {
@@ -184,25 +183,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             if (LOWORD(wParam) == 1)
             {
-                std::wstring path = OpenPngFileDialog();
-                const wchar_t* wcharPath = path.c_str();
-                
-                if (image) {
-                    delete image;
-                    image = nullptr;
-                }
-                image = new Image(wcharPath);
-                if (!image)
-                {
-                    MessageBox(hWnd, L"Failed to load image", L"Load Error", MB_ICONERROR | MB_OK);
-                }
-
-                if (!InvalidateRect(hWnd, nullptr, TRUE))
-                {
-                    MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
-                }
-                
-                MessageBox(hWnd, wcharPath, L"Path", MB_OK);
+                image->LoadFromBrowser(hWnd);
+                image->ScaleImage();
+            }
+            if (LOWORD(wParam) == 2)
+            {
+                image->GrayScale(hWnd);
+            }
+            if (LOWORD(wParam) == 3)
+            {
+                image->InvertImage(hWnd);
             }
             switch (wmId)
             {
@@ -223,8 +213,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             HDC hdc = BeginPaint(hWnd, &ps);
             if (image)
             {
+                Pen pen(Color(255, 0, 0, 0), 5);
                 Graphics graphics(hdc);
-                graphics.DrawImage(image, 60, 10);
+                graphics.DrawRectangle(&pen, *image->mRect);
+                graphics.DrawImage(image->mImage, *image->mRect);
             }
             EndPaint(hWnd, &ps);
         }
