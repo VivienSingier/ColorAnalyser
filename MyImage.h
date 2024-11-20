@@ -37,6 +37,7 @@ public:
 	void CryptMessage(HWND hWnd, Message* message);
 	void SetMessageCryptInfo();
 	bool IsCrypted();
+	int GetMessageLength();
 
 };
 

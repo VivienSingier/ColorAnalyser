@@ -221,14 +221,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             if (LOWORD(wParam) == 5)
             {
-                if (image->IsCrypted())
-                {
-                    MessageBox(hWnd, L"The image has a crypted message", L"Is Crypted", MB_OK);
-                }
-                else
-                {
-                    MessageBox(hWnd, L"The image doesn't have crypted message", L"Is Crypted", MB_OK);
-                }
+                int length = image->GetMessageLength();
+                wchar_t str[20];
+                swprintf_s(str, L"%d", length);
+                MessageBox(NULL, str, L"LENGTH", MB_OK);
             }
             switch (wmId)
             {

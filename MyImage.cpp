@@ -154,20 +154,11 @@ void MyImage::WriteOnLightestBit(int x, int y)
     mImage->GetPixel(x, y, &color);
     int colorIndex = (color.GetBlue());
 
-    //wchar_t str[20];
-    //swprintf_s(str, L"%d", colorIndex);
-    //MessageBox(NULL, str, L"BEFORE OP", MB_OK);
-
     colorIndex |= 1;
 
     color.SetValue(Color::MakeARGB(color.GetA(), color.GetR(), color.GetG(), colorIndex));
     mImage->SetPixel(x, y, color);
 
-    //mImage->GetPixel(x, y, &color);
-    //colorIndex = (color.GetBlue());
-
-    //swprintf_s(str, L"%d", colorIndex);
-    //MessageBox(NULL, str, L"AFTER OP", MB_OK);
 }
 
 bool MyImage::ReadLightestBit(int x, int y)
@@ -176,7 +167,7 @@ bool MyImage::ReadLightestBit(int x, int y)
     mImage->GetPixel(x, y, &color);
     int colorIndex = (color.GetBlue());
     colorIndex &= 1;
-    return colorIndex == 1;
+    return (colorIndex == 1);
 }
 
 void MyImage::CryptMessage(HWND hWnd, Message* message)
@@ -239,40 +230,38 @@ void MyImage::SetMessageCryptInfo()
         FreeLightestBit(width - i, height);
         if (key > (1 << i))
         {
-            Color color;
-            mImage->GetPixel(width - i, height, &color);
-            int colorIndex = (color.GetBlue());
-
-            wchar_t str[20];
-            swprintf_s(str, L"%d", colorIndex);
-            MessageBox(NULL, str, L"AVANT WRITE", MB_OK);
-
             WriteOnLightestBit(width - i, height);
             key -= (1 << i);
-
-
-            mImage->GetPixel(width - i, height, &color);
-            colorIndex = (color.GetBlue());
-            swprintf_s(str, L"%d", colorIndex);
-            MessageBox(NULL, str, L"APRES WRITE", MB_OK);
         }
     }
 }
 
 bool MyImage::IsCrypted()
 {
-    int key = 0;
-    int width = mImage->GetWidth();
-    int height = mImage->GetHeight();
+    int key = 1;
+    int width = mImage->GetWidth()-1;
+    int height = mImage->GetHeight()-1;
     for (int i = 16; i > -1; i--)
     {
-        if (ReadLightestBit(width - i, height))
+        bool lBit = ReadLightestBit(width - i, height);
+        if (lBit)
         {
             key += (1 << i);
         }
-        /*wchar_t str[20];
-        swprintf_s(str, L"%d", key);
-        MessageBox(NULL, str, L"TOZ", MB_OK);*/
     }
     return key == 69420;
+}
+
+int MyImage::GetMessageLength()
+{
+    int length = 1;
+    for (int i = 0; i < 8; i++)
+    {
+        bool lBit = ReadLightestBit(i, 0);
+        if (lBit)
+        {
+            length += (1 << (7 - i));
+        }
+    }
+    return length;
 }
