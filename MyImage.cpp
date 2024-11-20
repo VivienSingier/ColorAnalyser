@@ -142,7 +142,7 @@ void MyImage::FreeLightestBit(int x, int y)
 {
     Color color;
     mImage->GetPixel(x, y, &color);
-    int colorIndex = (int)(color.GetBlue());
+    int colorIndex = (color.GetBlue());
     colorIndex &= 254;
     color.SetValue(Color::MakeARGB(color.GetA(), color.GetR(), color.GetG(), colorIndex));
     mImage->SetPixel(x, y, color);
@@ -152,10 +152,31 @@ void MyImage::WriteOnLightestBit(int x, int y)
 {
     Color color;
     mImage->GetPixel(x, y, &color);
-    int colorIndex = (int)(color.GetBlue());
+    int colorIndex = (color.GetBlue());
+
+    //wchar_t str[20];
+    //swprintf_s(str, L"%d", colorIndex);
+    //MessageBox(NULL, str, L"BEFORE OP", MB_OK);
+
     colorIndex |= 1;
+
     color.SetValue(Color::MakeARGB(color.GetA(), color.GetR(), color.GetG(), colorIndex));
     mImage->SetPixel(x, y, color);
+
+    //mImage->GetPixel(x, y, &color);
+    //colorIndex = (color.GetBlue());
+
+    //swprintf_s(str, L"%d", colorIndex);
+    //MessageBox(NULL, str, L"AFTER OP", MB_OK);
+}
+
+bool MyImage::ReadLightestBit(int x, int y)
+{
+    Color color;
+    mImage->GetPixel(x, y, &color);
+    int colorIndex = (color.GetBlue());
+    colorIndex &= 1;
+    return colorIndex == 1;
 }
 
 void MyImage::CryptMessage(HWND hWnd, Message* message)
@@ -193,7 +214,7 @@ void MyImage::CryptMessage(HWND hWnd, Message* message)
                 characterCode -= (1 << i);
             }
             x++;
-            if (x > mImage->GetWidth())
+            if (x > mImage->GetWidth() - 1)
             {
                 x = 0;
                 y++;
@@ -201,8 +222,57 @@ void MyImage::CryptMessage(HWND hWnd, Message* message)
         }
         i++;
     }
+    SetMessageCryptInfo();
     if (!InvalidateRect(hWnd, nullptr, TRUE))
     {
         MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
     }
+}
+
+void MyImage::SetMessageCryptInfo()
+{
+    int key = 69420;
+    int width = mImage->GetWidth() - 1;
+    int height = mImage->GetHeight() - 1;
+    for (int i = 16; i > -1; i--)
+    {
+        FreeLightestBit(width - i, height);
+        if (key > (1 << i))
+        {
+            Color color;
+            mImage->GetPixel(width - i, height, &color);
+            int colorIndex = (color.GetBlue());
+
+            wchar_t str[20];
+            swprintf_s(str, L"%d", colorIndex);
+            MessageBox(NULL, str, L"AVANT WRITE", MB_OK);
+
+            WriteOnLightestBit(width - i, height);
+            key -= (1 << i);
+
+
+            mImage->GetPixel(width - i, height, &color);
+            colorIndex = (color.GetBlue());
+            swprintf_s(str, L"%d", colorIndex);
+            MessageBox(NULL, str, L"APRES WRITE", MB_OK);
+        }
+    }
+}
+
+bool MyImage::IsCrypted()
+{
+    int key = 0;
+    int width = mImage->GetWidth();
+    int height = mImage->GetHeight();
+    for (int i = 16; i > -1; i--)
+    {
+        if (ReadLightestBit(width - i, height))
+        {
+            key += (1 << i);
+        }
+        /*wchar_t str[20];
+        swprintf_s(str, L"%d", key);
+        MessageBox(NULL, str, L"TOZ", MB_OK);*/
+    }
+    return key == 69420;
 }

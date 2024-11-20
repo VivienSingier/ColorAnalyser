@@ -29,9 +29,14 @@ public:
 	void ScaleImage();
 	void GrayScale(HWND hWnd);
 	void InvertImage(HWND hWnd);
+
 	void FreeLightestBit(int x, int y);
 	void WriteOnLightestBit(int x, int y);
+	bool ReadLightestBit(int x, int y);
+
 	void CryptMessage(HWND hWnd, Message* message);
+	void SetMessageCryptInfo();
+	bool IsCrypted();
 
 };
 

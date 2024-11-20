@@ -164,6 +164,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
        NULL);
 
+   HWND IsCryptedButton = CreateWindow(
+       L"BUTTON",
+       L"IsCrypted",
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       440, 500, 100, 100,
+       hWnd,
+       (HMENU)5,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
+       NULL);
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -208,6 +218,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 Message* msg = new Message(L"PATATE");
                 image->CryptMessage(hWnd, msg);
+            }
+            if (LOWORD(wParam) == 5)
+            {
+                if (image->IsCrypted())
+                {
+                    MessageBox(hWnd, L"The image has a crypted message", L"Is Crypted", MB_OK);
+                }
+                else
+                {
+                    MessageBox(hWnd, L"The image doesn't have crypted message", L"Is Crypted", MB_OK);
+                }
             }
             switch (wmId)
             {
