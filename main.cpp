@@ -27,6 +27,18 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
+HWND LoadImageButton;
+HWND GrayScaleButton;
+HWND InvertButton;
+HWND WriteMessageButton;
+HWND ReadMessageButton;
+HWND SaveAsButton;
+HWND EditMessage;
+
+int WinWidth = 600;
+int WinHeight = 900;
+int ControlHeight = 555;
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -116,63 +128,48 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Stocke le handle d'instance dans la variable globale
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, 1280, 1024, nullptr, nullptr, hInstance, nullptr);
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME,
+      CW_USEDEFAULT, 0, WinWidth, WinHeight, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
       return FALSE;
    }
 
-   HWND LoadImageButton = CreateWindow(
-       L"BUTTON",
-       L"Load Image",
-       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       10, 10, 100, 100,
+   LoadImageButton = CreateWindow( L"BUTTON", L"Load Image", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       (WinWidth / 2) - 160 , 25, 150, 20, hWnd, (HMENU)1, 
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+
+   GrayScaleButton = CreateWindow( L"BUTTON", L"GrayScale", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       10, ControlHeight + 180, 150, 20, hWnd, (HMENU)2,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+
+   InvertButton = CreateWindow( L"BUTTON", L"Invert", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       10, ControlHeight + 210, 150, 20, hWnd, (HMENU)3,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+
+   WriteMessageButton = CreateWindow( L"BUTTON", L"Encrypt", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       (WinWidth / 2) - 160, ControlHeight, 150, 20, hWnd, (HMENU)4,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+
+   ReadMessageButton = CreateWindow( L"BUTTON", L"Decrypt", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       (WinWidth / 2) + 10, ControlHeight, 150, 20, hWnd, (HMENU)6,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+
+   SaveAsButton = CreateWindow( L"BUTTON", L"Save As", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       (WinWidth / 2) + 10, 25, 150, 20, hWnd, (HMENU)7,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+
+   EditMessage = CreateWindow(
+       L"EDIT",
+       0,
+       WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE,
+       200, ControlHeight + 30, 200, 100,
        hWnd,
-       (HMENU)1,
+       NULL,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
        NULL);
 
-   HWND GrayScaleButton = CreateWindow(
-       L"BUTTON",
-       L"GrayScale",
-       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       10, 500, 100, 100,
-       hWnd,
-       (HMENU)2,
-       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
-       NULL);
-
-   HWND InvertButton = CreateWindow(
-       L"BUTTON",
-       L"Invert",
-       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       120, 500, 100, 100,
-       hWnd,
-       (HMENU)3,
-       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
-       NULL);
-
-   HWND PatateButton = CreateWindow(
-       L"BUTTON",
-       L"PATATE",
-       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       230, 500, 100, 100,
-       hWnd,
-       (HMENU)4,
-       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
-       NULL);
-
-   HWND IsCryptedButton = CreateWindow(
-       L"BUTTON",
-       L"IsCrypted",
-       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       440, 500, 100, 100,
-       hWnd,
-       (HMENU)5,
-       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
-       NULL);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -180,16 +177,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  FONCTION : WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  OBJECTIF : Traite les messages pour la fenêtre principale.
-//
-//  WM_COMMAND  - traite le menu de l'application
-//  WM_PAINT    - Dessine la fenêtre principale
-//  WM_DESTROY  - génère un message d'arrêt et retourne
-//
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     MyImage* image = MyImage::GetInstance();
@@ -204,6 +191,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == 1)
             {
                 image->LoadFromBrowser(hWnd);
+                image->SetEditLimit(EditMessage);
                 image->ScaleImage();
             }
             if (LOWORD(wParam) == 2)
@@ -216,15 +204,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             if (LOWORD(wParam) == 4)
             {
-                Message* msg = new Message(L"PATATE");
+                wchar_t* buffer = new wchar_t[image->GetMaxLength()];
+                GetWindowText(EditMessage, buffer, image->GetMaxLength());
+                Message* msg = new Message(buffer);
                 image->CryptMessage(hWnd, msg);
             }
-            if (LOWORD(wParam) == 5)
+            if (LOWORD(wParam) == 6)
             {
-                int length = image->GetMessageLength();
-                wchar_t str[20];
-                swprintf_s(str, L"%d", length);
-                MessageBox(NULL, str, L"LENGTH", MB_OK);
+                wchar_t* message = image->ReadMessage();
+                SetWindowText(EditMessage, message);
+            }
+            if (LOWORD(wParam) == 7)
+            {
+                image->SaveImage(hWnd);
             }
             switch (wmId)
             {

@@ -8,6 +8,8 @@ class Message
 	int mLength;
 
 public:
+
+
 	Message(const wchar_t* message);
 	int GetLength();
 	int GetCharacterCode(int index);
