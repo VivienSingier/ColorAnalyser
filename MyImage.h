@@ -29,7 +29,7 @@ public:
 
 	int GetMaxLength();
 
-	//Importer Image 
+	//Importer/Enregistrer Image 
 	void LoadFromBrowser(HWND hWnd);
 	void SaveImage(HWND hWnd);
 	void SetEditLimit(HWND hWndEdit);
@@ -38,6 +38,7 @@ public:
 	void ScaleImage();
 	void GrayScale(HWND hWnd);
 	void InvertImage(HWND hWnd);
+	void Reset(HWND hWnd);
 
 	//Opérations sur le bit leger d'un pixel de l'image
 	void FreeLightestBit(int x, int y);

@@ -63,6 +63,12 @@ bool SaveImageAsPNG(Bitmap* image, const WCHAR* filename) {
 
 void MyImage::SaveImage(HWND hWnd)
 {
+    if (mImage == nullptr)
+    {
+        MessageBox(hWnd, L"There is no image loaded",
+            L"Writing Infringement Error", MB_OK | MB_ICONERROR);
+        return;
+    }
     OPENFILENAME ofn;
     WCHAR szFile[260] = { 0 };
 
@@ -244,6 +250,16 @@ void MyImage::InvertImage(HWND hWnd)
             mImage->SetPixel(i, j, color);
         }
     }
+    if (!InvalidateRect(hWnd, nullptr, TRUE))
+    {
+        MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
+    }
+}
+
+void MyImage::Reset(HWND hWnd)
+{
+    delete mImage;
+    mImage = mDefaultImage->Clone(Rect(mX, mY, mDefaultImage->GetWidth(), mDefaultImage->GetHeight()), mDefaultImage->GetPixelFormat());;
     if (!InvalidateRect(hWnd, nullptr, TRUE))
     {
         MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);

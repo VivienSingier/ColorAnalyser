@@ -33,6 +33,7 @@ HWND InvertButton;
 HWND WriteMessageButton;
 HWND ReadMessageButton;
 HWND SaveAsButton;
+HWND ResetImageButton;
 HWND EditMessage;
 
 int WinWidth = 600;
@@ -160,6 +161,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        (WinWidth / 2) + 10, 25, 150, 20, hWnd, (HMENU)7,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
+   ResetImageButton = CreateWindow(L"BUTTON", L"Reset", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       (WinWidth / 2) - 75, ControlHeight + 140, 150, 20, hWnd, (HMENU)5,
+       (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+
+   ResetImageButton = 
+
    EditMessage = CreateWindow(
        L"EDIT",
        0,
@@ -208,6 +215,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 GetWindowText(EditMessage, buffer, image->GetMaxLength());
                 Message* msg = new Message(buffer);
                 image->CryptMessage(hWnd, msg);
+            }
+            if (LOWORD(wParam) == 5)
+            {
+                image->Reset(hWnd);
             }
             if (LOWORD(wParam) == 6)
             {
