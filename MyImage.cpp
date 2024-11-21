@@ -112,9 +112,17 @@ MyImage::MyImage()
 {
 	mImage = nullptr;
     mDefaultImage = nullptr;
+    mMasquedImage = nullptr;
+
     mRect = new Rect(100, 100, 0, 0);
     mX = 100;
     mY = 100;
+
+    redMasc = 122;
+    greenMasc = 122;
+    blueMasc = 122;
+    displayMasc = false;
+
     mMessageMaxLength = 0;
     mHasMessageHidden = false;
 }
@@ -134,9 +142,13 @@ void MyImage::LoadFromBrowser(HWND hWnd)
         mImage = nullptr;
         delete mDefaultImage;
         mDefaultImage = nullptr;
+        delete mMasquedImage; 
+        mMasquedImage = nullptr;
     }
     mImage = new Bitmap(wcharPath);
     mDefaultImage = new Bitmap(wcharPath);
+    mMasquedImage = new Bitmap(wcharPath);
+
     if (!mImage)
     {
         MessageBox(hWnd, L"Failed to load image", L"Load Error", MB_ICONERROR | MB_OK);
@@ -151,18 +163,50 @@ void MyImage::LoadFromBrowser(HWND hWnd)
     {
         MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
     }
+    mHasMessageHidden = false;
 }
 
 void MyImage::SetEditLimit(HWND hWndEdit)
 {
+    if (IsCrypted())
+    {
+        mHasMessageHidden = true;
+    }
     int width = mImage->GetWidth();
     int height = mImage->GetHeight();
 
-    int size = width * height - height - 16;
+    int size = CountValidPixels() - width - 17;
+    if (size < 0)
+    {
+        size = 0;
+    }
     size /= 16;
 
+    wchar_t str[20];
+    swprintf_s(str, L"%d", size);
+    MessageBox(NULL, str,
+        L"Write", MB_OK | MB_ICONERROR);
     mMessageMaxLength = size;
     SendMessage(hWndEdit, EM_SETLIMITTEXT, size, 0);
+}
+
+int MyImage::CountValidPixels()
+{
+    int count = 0;
+    for (int i = 0; i < mImage->GetWidth(); i++)
+    {
+        for (int j = 0; j < mImage->GetHeight(); j++)
+        {
+            Color color;
+            Color white = Color::White;
+            mMasquedImage->GetPixel(i, j, &color);
+            if (color.GetR() == white.GetR() && color.GetG() == white.GetG() && color.GetB() == white.GetB())
+            {
+                count++;
+            }
+        }
+    }
+    return count;
 }
 
 void MyImage::ScaleImage()
@@ -198,11 +242,6 @@ void MyImage::ScaleImage()
     delete mRect;
     mRect = nullptr;
     mRect = new Rect(mX, mY, width, height);
-
-    if (IsCrypted())
-    {
-        mHasMessageHidden = true;
-    }
 }
 
 void MyImage::GrayScale(HWND hWnd)
@@ -258,12 +297,63 @@ void MyImage::InvertImage(HWND hWnd)
 
 void MyImage::Reset(HWND hWnd)
 {
-    delete mImage;
-    mImage = mDefaultImage->Clone(Rect(mX, mY, mDefaultImage->GetWidth(), mDefaultImage->GetHeight()), mDefaultImage->GetPixelFormat());;
+    for (int i = 0; i < mImage->GetWidth(); i++)
+    {
+        for (int j = 0; j < mImage->GetHeight(); j++)
+        {
+            Color color;
+            mDefaultImage->GetPixel(i, j, &color);
+
+            Color color2;
+            color2.SetValue(Color::MakeARGB(color.GetA(), color.GetR(), color.GetG(), color.GetB()));
+            mImage->SetPixel(i, j, color2);
+        }
+    }
+    mHasMessageHidden = false;
     if (!InvalidateRect(hWnd, nullptr, TRUE))
     {
         MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
     }
+}
+
+void MyImage::SetMasc(HWND hWnd)
+{
+    for (int i = 0; i < mImage->GetWidth(); i++)
+    {
+        for (int j = 0; j < mImage->GetHeight(); j++)
+        {
+            Color color;
+            mImage->GetPixel(i, j, &color);
+            if (color.GetR() <= redMasc && color.GetG() <= greenMasc && color.GetB() <= blueMasc)
+            {
+                color.SetValue(Color::Black);
+            }
+            else 
+            {
+                color.SetValue(Color::White);
+            }
+            mMasquedImage->SetPixel(i, j, color);
+        }
+    }
+    if (!InvalidateRect(hWnd, nullptr, TRUE))
+    {
+        MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
+    }
+}
+
+void MyImage::SetMascColors(int red, int green, int blue)
+{
+    redMasc = red;
+    greenMasc = green;
+    blueMasc = blue;
+}
+
+bool MyImage::IsValidPixel(int x, int y)
+{
+    Color color;
+    Color white = Color::White;
+    mMasquedImage->GetPixel(x, y, &color);
+    return (color.GetR() == white.GetR() && color.GetG() == white.GetG() && color.GetB() == white.GetB());
 }
 
 void MyImage::FreeLightestBit(int x, int y)
@@ -324,7 +414,7 @@ void MyImage::CryptMessage(HWND hWnd, Message* message)
     for (int i = 7; i > -1; i--)
     {
         FreeLightestBit(7 - i, 0);
-        if (tempLength > (1 << i))
+        if (tempLength >= (1 << i))
         {
             WriteOnLightestBit(7 - i, 0);
             tempLength -= (1 << i);
@@ -337,8 +427,17 @@ void MyImage::CryptMessage(HWND hWnd, Message* message)
         int characterCode = message->GetCharacterCode(i);
         for (int j = 15; j > -1; j--)
         {
+            while (!IsValidPixel(x, y))
+            {
+                x++;
+                if (x > mImage->GetWidth() - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+            }
             FreeLightestBit(x, y);
-            if (characterCode > (1 << j))
+            if (characterCode >= (1 << j))
             {
                 WriteOnLightestBit(x, y);
                 characterCode -= (1 << j);
@@ -361,30 +460,69 @@ void MyImage::CryptMessage(HWND hWnd, Message* message)
 void MyImage::SetMessageCryptInfo()
 {
     int key = 69420;
-    int width = mImage->GetWidth() - 1;
-    int height = mImage->GetHeight() - 1;
-    for (int i = 16; i > -1; i--)
+    int width = mImage->GetWidth()-1;
+    int height = mImage->GetHeight()-1;
+    int x = width;
+    int y = height;
+    for (int i = 0; i < 17; i++)
     {
-        FreeLightestBit(width - i, height);
-        if (key > (1 << i))
+        while (!IsValidPixel(x, y))
         {
-            WriteOnLightestBit(width - i, height);
-            key -= (1 << i);
+            x--;
+            if (x < 0)
+            {
+                x = width;
+                y--;
+            }
         }
-    }
+        FreeLightestBit(x, y);
+        if (key >= (1 << (16 - i)))
+        {
+            WriteOnLightestBit(x, y);
+            key -= (1 << (16 - i));
+            //wchar_t str[20];
+            //swprintf_s(str, L"%d", key);
+            //MessageBox(NULL, str,
+            //    L"Write", MB_OK | MB_ICONERROR);
+        }
+        x--;
+        if (x < 0)
+        {
+            x = width;
+            y--;
+        }
+    } 
 }
 
 bool MyImage::IsCrypted()
 {
-    int key = 1;
+    int key = 0;
     int width = mImage->GetWidth()-1;
     int height = mImage->GetHeight()-1;
-    for (int i = 16; i > -1; i--)
+    int x = width;
+    int y = height;
+    for (int i = 0; i < 17; i++)
     {
-        bool lBit = ReadLightestBit(width - i, height);
+        while (!IsValidPixel(x, y))
+        {
+            x--;
+            if (x < 0)
+            {
+                x = width;
+                y--;
+            }
+        }
+        bool lBit = ReadLightestBit(x, y);
         if (lBit)
         {
-            key += (1 << i);
+            key += (1 << (16 - i));
+            wchar_t str[20];
+        }
+        x--;
+        if (x < 0)
+        {
+            x = width;
+            y--;
         }
     }
     return key == 69420;
@@ -392,7 +530,7 @@ bool MyImage::IsCrypted()
 
 int MyImage::GetMessageLength()
 {
-    int length = 1;
+    int length = 0;
     for (int i = 0; i < 8; i++)
     {
         bool lBit = ReadLightestBit(i, 0);
@@ -412,6 +550,12 @@ wchar_t* MyImage::ReadMessage()
             L"Reading Infringement Error", MB_OK | MB_ICONERROR);
         return 0;
     }
+    if (!IsCrypted())
+    {
+        MessageBox(NULL, L"There is no message written",
+            L"Reading Infringement Error", MB_OK | MB_ICONERROR);
+        return 0;
+    }
     int length = GetMessageLength();
     int x = 0;
     int y = 1;
@@ -419,9 +563,18 @@ wchar_t* MyImage::ReadMessage()
 
     for (int i = 0; i < length; i++)
     {
-        int characterCode = 1;
+        int characterCode = 0;
         for (int j = 15; j > -1; j--)
         {
+            while (!IsValidPixel(x, y))
+            {
+                x++;
+                if (x > mImage->GetWidth() - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+            }
             bool lBit = ReadLightestBit(x, y);
             if (lBit)
             {
@@ -433,6 +586,9 @@ wchar_t* MyImage::ReadMessage()
                 x = 0;
                 y++;
             }
+            //wchar_t str[20];
+            //swprintf_s(str, L"%d", key);
+            
         }
         message[i] = (wchar_t)characterCode;
     }

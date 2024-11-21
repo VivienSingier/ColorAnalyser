@@ -133,11 +133,13 @@
     <ClInclude Include="MyImage.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TrackBar.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Message.cpp" />
     <ClCompile Include="MyImage.cpp" />
+    <ClCompile Include="TrackBar.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ColorAnalyser.rc" />

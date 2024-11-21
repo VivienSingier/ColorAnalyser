@@ -4,15 +4,18 @@
 #include <gdiplus.h>
 #include <windows.h>
 #include <commdlg.h>
+#include <commctrl.h>
 #include <iostream>
 #include <string>
 #include "framework.h"
 #include "ColorAnalyser.h"
 
 #include "MyImage.h"
+#include "TrackBar.h"
 
 using namespace Gdiplus;
 #pragma comment (lib,"Gdiplus.lib")
+#pragma comment(lib, "Comctl32.lib")
 
 #define MAX_LOADSTRING 100
 
@@ -34,6 +37,11 @@ HWND WriteMessageButton;
 HWND ReadMessageButton;
 HWND SaveAsButton;
 HWND ResetImageButton;
+
+TrackBar* TBRed;
+TrackBar* TBGreen;
+TrackBar* TBBlue;
+
 HWND EditMessage;
 
 int WinWidth = 600;
@@ -165,7 +173,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
        (WinWidth / 2) - 75, ControlHeight + 140, 150, 20, hWnd, (HMENU)5,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
-   ResetImageButton = 
+   TBRed = new TrackBar(280, ControlHeight + 180, hWnd);
+   TBGreen = new TrackBar(280, ControlHeight + 210, hWnd);
+   TBBlue = new TrackBar(280, ControlHeight + 240, hWnd);
 
    EditMessage = CreateWindow(
        L"EDIT",
@@ -184,12 +194,39 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+int UpdateTrackbarValue(TrackBar* tb)
+{
+    // Retrieve the current value of the trackbar
+    int value = SendMessage(tb->mWindow, TBM_GETPOS, 0, 0);
+
+    // Update the label text
+    wchar_t text[32];
+    swprintf_s(text, L"%d", value);
+    SetWindowText(tb->mLabel, text);
+
+    return value;
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     MyImage* image = MyImage::GetInstance();
 
+    static HBRUSH hBrushRED;
+    static HBRUSH hBrushGREEN;
+    static HBRUSH hBrushBLUE;
+
+    int red;
+    int green;
+    int blue;
+
     switch (message)
     {
+    case WM_CREATE:
+    {
+        hBrushRED = CreateSolidBrush(RGB(255, 0, 0));
+        hBrushBLUE = CreateSolidBrush(RGB(0, 0, 255));
+        hBrushGREEN = CreateSolidBrush(RGB(0, 255, 0));
+    }
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -198,8 +235,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == 1)
             {
                 image->LoadFromBrowser(hWnd);
-                image->SetEditLimit(EditMessage);
                 image->ScaleImage();
+                image->SetMasc(hWnd);
+                image->SetEditLimit(EditMessage);
             }
             if (LOWORD(wParam) == 2)
             {
@@ -242,6 +280,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+    case WM_CTLCOLORSTATIC:
+        {
+            if ((HWND)lParam == TBRed->mWindow)
+            {
+                
+                HDC hdcStatic = (HDC)wParam;
+                SetBkColor(hdcStatic, RGB(255, 0, 0)); 
+                return (LRESULT)hBrushRED;
+            }
+            if ((HWND)lParam == TBBlue->mWindow)
+            {
+                
+                HDC hdcStatic = (HDC)wParam;
+                SetBkColor(hdcStatic, RGB(0, 0, 255)); 
+                return (LRESULT)hBrushBLUE;
+            }
+            if ((HWND)lParam == TBGreen->mWindow)
+            {
+                
+                HDC hdcStatic = (HDC)wParam;
+                SetBkColor(hdcStatic, RGB(0, 255, 0)); 
+                return (LRESULT)hBrushGREEN;
+            }
+        }
+        break;
+    case WM_HSCROLL:
+        {
+            red = image->redMasc;
+            green = image->greenMasc;
+            blue = image->blueMasc;
+
+            if ((HWND)lParam == TBRed->mWindow)
+            {
+                red = UpdateTrackbarValue(TBRed);
+            }
+            if ((HWND)lParam == TBGreen->mWindow)
+            {
+                green = UpdateTrackbarValue(TBGreen);
+            }
+            if ((HWND)lParam == TBBlue->mWindow)
+            {
+                blue = UpdateTrackbarValue(TBBlue);
+            }
+            image->SetMascColors(red, green, blue);
+            image->SetMasc(hWnd);
+            image->SetEditLimit(EditMessage);
+        }
+        break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -250,6 +336,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 Pen pen(Color(255, 0, 0, 0), 5);
                 Graphics graphics(hdc);
+                graphics.SetInterpolationMode(InterpolationModeNearestNeighbor);
                 graphics.DrawRectangle(&pen, *image->mRect);
                 graphics.DrawImage(image->mImage, *image->mRect);
             }

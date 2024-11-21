@@ -16,13 +16,21 @@ class MyImage
 	static MyImage* mInstance;
 	int mX;
 	int mY;
+
 	int mMessageMaxLength;
 	bool mHasMessageHidden;
 	Bitmap* mDefaultImage;
 
+	bool displayMasc;
+
 public:
 	Bitmap* mImage;
+	Bitmap* mMasquedImage;
 	Rect* mRect;
+
+	int redMasc;
+	int greenMasc;
+	int blueMasc;
 	  
 	static MyImage* GetInstance();
 	MyImage();
@@ -33,14 +41,19 @@ public:
 	void LoadFromBrowser(HWND hWnd);
 	void SaveImage(HWND hWnd);
 	void SetEditLimit(HWND hWndEdit);
+	int CountValidPixels();
 
 	//Filtres
 	void ScaleImage();
 	void GrayScale(HWND hWnd);
 	void InvertImage(HWND hWnd);
 	void Reset(HWND hWnd);
+	void SetMasc(HWND hWnd);
+	void SetMascColors(int red, int green, int blue);
+
 
 	//Opérations sur le bit leger d'un pixel de l'image
+	bool IsValidPixel(int x, int y);
 	void FreeLightestBit(int x, int y);
 	void WriteOnLightestBit(int x, int y);
 	bool ReadLightestBit(int x, int y);
