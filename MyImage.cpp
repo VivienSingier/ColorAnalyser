@@ -296,6 +296,12 @@ void MyImage::InvertImage(HWND hWnd)
 
 void MyImage::Reset(HWND hWnd)
 {
+    if (mImage == nullptr)
+    {
+        MessageBox(hWnd, L"There is no image loaded",
+            L"Writing Infringement Error", MB_OK | MB_ICONERROR);
+        return;
+    }
     for (int i = 0; i < mImage->GetWidth(); i++)
     {
         for (int j = 0; j < mImage->GetHeight(); j++)
