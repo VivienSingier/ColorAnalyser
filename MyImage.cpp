@@ -118,6 +118,9 @@ MyImage::MyImage()
     mX = 100;
     mY = 100;
 
+    mMaxWidth = 500;
+    mMaxHeight = 500;
+
     redMasc = 122;
     greenMasc = 122;
     blueMasc = 122;
@@ -182,10 +185,6 @@ void MyImage::SetEditLimit(HWND hWndEdit)
     }
     size /= 16;
 
-    wchar_t str[20];
-    swprintf_s(str, L"%d", size);
-    MessageBox(NULL, str,
-        L"Write", MB_OK | MB_ICONERROR);
     mMessageMaxLength = size;
     SendMessage(hWndEdit, EM_SETLIMITTEXT, size, 0);
 }
@@ -214,24 +213,24 @@ void MyImage::ScaleImage()
     int width = (int)mImage->GetWidth();
     int height = (int)mImage->GetHeight();
 
-    if (width > 500 || height > 500)
+    if (width > mMaxWidth || height > mMaxHeight)
     {
-        while (width > 500 || height > 500)
+        while (width > mMaxWidth || height > mMaxHeight)
         {
             width--;
             height--;
         }
     }
-    else if (width < 500 || height < 500)
+    else if (width < mMaxWidth || height < mMaxHeight)
     {
-        while (width < 500 || height < 500)
+        while (width < mMaxWidth || height < mMaxHeight)
         {
             width++;
             height++;
         }
     }
     mX = 300 - width / 2 - 10;
-    if (height < 500)
+    if (height < mMaxHeight)
     {
         mY = 295 - (height / 2);
     }

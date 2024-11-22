@@ -14,19 +14,23 @@ using namespace Gdiplus;
 class MyImage
 {
 	static MyImage* mInstance;
-	int mX;
-	int mY;
 
 	int mMessageMaxLength;
 	bool mHasMessageHidden;
 	Bitmap* mDefaultImage;
 
-	bool displayMasc;
-
 public:
 	Bitmap* mImage;
 	Bitmap* mMasquedImage;
 	Rect* mRect;
+
+	int mMaxWidth;
+	int mMaxHeight;
+
+	int mX;
+	int mY;
+
+	bool displayMasc;
 
 	int redMasc;
 	int greenMasc;

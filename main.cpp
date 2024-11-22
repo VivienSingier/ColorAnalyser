@@ -19,6 +19,11 @@ using namespace Gdiplus;
 
 #define MAX_LOADSTRING 100
 
+#define MIN_WIDTH 600
+#define MIN_HEIGHT 900
+#define MAX_WIDTH 1920
+#define MAX_HEIGHT 1080
+
 // Variables globales :
 HINSTANCE hInst;                                // instance actuelle
 WCHAR szTitle[MAX_LOADSTRING];                  // Texte de la barre de titre
@@ -37,6 +42,7 @@ HWND WriteMessageButton;
 HWND ReadMessageButton;
 HWND SaveAsButton;
 HWND ResetImageButton;
+HWND ToggleMASK;
 
 TrackBar* TBRed;
 TrackBar* TBGreen;
@@ -46,7 +52,22 @@ HWND EditMessage;
 
 int WinWidth = 600;
 int WinHeight = 900;
-int ControlHeight = 555;
+int TopControlX = 300;
+int TopControlY = 25;
+int MessageControlX = 300;
+int MessageControlY = 555;
+int TrackBarX = 280;
+int TrackBarY = 900 - 165;
+int FilterControlX = 10;
+int FilterControlY = 900 - 165;
+int IsModeHigh = 0;
+int IsModeLow = 1;
+int ImageCenterX = 300;
+int ImageCenterY = 295;
+int imgWidth = 0;
+int imgHeight = 0;
+int ImageY = 0;
+int ImageX = 0;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -137,7 +158,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Stocke le handle d'instance dans la variable globale
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME,
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, WinWidth, WinHeight, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
@@ -146,47 +167,52 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    }
 
    LoadImageButton = CreateWindow( L"BUTTON", L"Load Image", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       (WinWidth / 2) - 160 , 25, 150, 20, hWnd, (HMENU)1, 
+       TopControlX - 160 , 25, 150, 20, hWnd, (HMENU)1, 
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
    GrayScaleButton = CreateWindow( L"BUTTON", L"GrayScale", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       10, ControlHeight + 180, 150, 20, hWnd, (HMENU)2,
+       FilterControlX, FilterControlY, 150, 20, hWnd, (HMENU)2,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
    InvertButton = CreateWindow( L"BUTTON", L"Invert", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       10, ControlHeight + 210, 150, 20, hWnd, (HMENU)3,
+       FilterControlX, FilterControlY + 30, 150, 20, hWnd, (HMENU)3,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
    WriteMessageButton = CreateWindow( L"BUTTON", L"Encrypt", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       (WinWidth / 2) - 160, ControlHeight, 150, 20, hWnd, (HMENU)4,
+       MessageControlX - 160, MessageControlY, 150, 20, hWnd, (HMENU)4,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
    ReadMessageButton = CreateWindow( L"BUTTON", L"Decrypt", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       (WinWidth / 2) + 10, ControlHeight, 150, 20, hWnd, (HMENU)6,
+       MessageControlX + 10, MessageControlY, 150, 20, hWnd, (HMENU)6,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
    SaveAsButton = CreateWindow( L"BUTTON", L"Save As", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       (WinWidth / 2) + 10, 25, 150, 20, hWnd, (HMENU)7,
+       TopControlX + 10, 25, 150, 20, hWnd, (HMENU)7,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
    ResetImageButton = CreateWindow(L"BUTTON", L"Reset", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-       (WinWidth / 2) - 75, ControlHeight + 140, 150, 20, hWnd, (HMENU)5,
+       MessageControlX - 75, MessageControlY + 140, 150, 20, hWnd, (HMENU)5,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
 
-   TBRed = new TrackBar(280, ControlHeight + 180, hWnd);
-   TBGreen = new TrackBar(280, ControlHeight + 210, hWnd);
-   TBBlue = new TrackBar(280, ControlHeight + 240, hWnd);
+   ToggleMASK = CreateWindowEx(
+       0, TEXT("BUTTON"), TEXT("Toggle Mask"),
+       WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+       FilterControlX, FilterControlY + 60, 150, 20,
+       hWnd, (HMENU)8, NULL, NULL);
+
+   TBRed = new TrackBar(TrackBarX, TrackBarY, hWnd);
+   TBGreen = new TrackBar(TrackBarX, TrackBarY + 30, hWnd);
+   TBBlue = new TrackBar(TrackBarX, TrackBarY + 60, hWnd);
 
    EditMessage = CreateWindow(
        L"EDIT",
        0,
        WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE,
-       200, ControlHeight + 30, 200, 100,
+       MessageControlX - 100, MessageControlY + 30, 200, 100,
        hWnd,
        NULL,
        (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
        NULL);
-
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -205,6 +231,116 @@ int UpdateTrackbarValue(TrackBar* tb)
     SetWindowText(tb->mLabel, text);
 
     return value;
+}
+
+void UpdatePositions(HWND hWnd)
+{
+    MyImage* image = MyImage::GetInstance();
+    
+    RECT wndRect;
+    GetWindowRect(hWnd, &wndRect);
+
+    int wndWidth = wndRect.right - wndRect.left;
+    int wndHeight = wndRect.bottom - wndRect.top;
+
+    if (wndWidth < 1280)
+    {
+        TopControlX = (wndWidth / 2);
+        MessageControlX = (wndWidth / 2);
+        MessageControlY = wndHeight - 345;
+        IsModeLow = 1;
+        IsModeHigh = 0;
+        TrackBarX = wndWidth - 320;
+        TrackBarY = wndHeight - 165;
+        FilterControlX = 10;
+        FilterControlY = wndHeight - 165;
+        ImageCenterX = (wndWidth / 2);
+        ImageCenterY = 45 + ((wndHeight - 400) / 2);
+        ImageX = wndWidth - 100;
+        ImageY = wndHeight - 400;
+    }
+    else
+    {
+        TopControlX = 640;
+        MessageControlX = wndWidth - 160;
+        MessageControlY = 100;
+        IsModeLow = 0;
+        IsModeHigh = 1;
+        FilterControlX = wndWidth - 160;
+        FilterControlY = 350;
+        TrackBarX = wndWidth - 320;
+        TrackBarY = 500;
+        ImageCenterX = 640;
+        ImageCenterY = 45 + ((wndHeight - 100) / 2);
+        ImageX = 880;
+        ImageY = wndHeight - 200;
+
+    }
+    int change = 0;
+    if (image->mImage != nullptr)
+    {
+        imgWidth = image->mImage->GetWidth();
+        imgHeight = image->mImage->GetHeight();
+        if (imgWidth > ImageX && imgHeight > ImageY)
+        {
+            if (imgWidth - ImageX > imgHeight > ImageY)
+            {
+                change = -(imgHeight - ImageY);
+            }
+            else
+            {
+                change = -(imgWidth - ImageX);
+            }
+        }
+        else if (imgWidth < ImageX - 20 && imgHeight < ImageY - 20)
+        {
+            if (ImageX - imgWidth > ImageY - imgHeight)
+            {
+                change = ImageY - imgHeight;
+            }
+            else
+            {
+                change = ImageX - imgWidth;
+            }
+        }
+        imgWidth += change;
+        imgHeight += change;
+
+        image->mRect->X = ImageCenterX - (imgWidth / 2);
+        image->mRect->Y = ImageCenterY - (imgHeight / 2);
+        image->mRect->Width = imgWidth;
+        image->mRect->Height = imgHeight;
+    }
+
+    {
+        SetWindowPos(LoadImageButton, NULL, TopControlX - 160, TopControlY, 0, 0, SWP_NOSIZE);
+        SetWindowPos(SaveAsButton, NULL, TopControlX + 10, TopControlY, 0, 0, SWP_NOSIZE);
+
+        SetWindowPos(WriteMessageButton, NULL, MessageControlX - (160 * IsModeLow) - (90 * IsModeHigh), MessageControlY, 0, 0, SWP_NOSIZE);
+        SetWindowPos(ReadMessageButton, NULL, MessageControlX + (10 * IsModeLow) - (90 * IsModeHigh), MessageControlY + (30 * IsModeHigh), 0, 0, SWP_NOSIZE);
+
+        SetWindowPos(EditMessage, NULL, MessageControlX - 100 - (15 * IsModeHigh), MessageControlY + 30 + (30 * IsModeHigh), 0, 0, SWP_NOSIZE);
+        SetWindowPos(ResetImageButton, NULL, MessageControlX - 75 - (15 * IsModeHigh), MessageControlY + 140 + (30 * IsModeHigh), 0, 0, SWP_NOSIZE);
+
+        SetWindowPos(GrayScaleButton, NULL, FilterControlX - (90 * IsModeHigh), FilterControlY, 0, 0, SWP_NOSIZE);
+        SetWindowPos(InvertButton, NULL, FilterControlX - (90 * IsModeHigh), FilterControlY + 30, 0, 0, SWP_NOSIZE);
+        SetWindowPos(ToggleMASK, NULL, FilterControlX - (90 * IsModeHigh), FilterControlY + 60, 0, 0, SWP_NOSIZE);
+
+        SetWindowPos(TBRed->mWindow, NULL, TrackBarX, TrackBarY, 0, 0, SWP_NOSIZE);
+        SetWindowPos(TBRed->mLabel, NULL, TrackBarX - 30, TrackBarY + 5, 0, 0, SWP_NOSIZE);
+
+        SetWindowPos(TBGreen->mWindow, NULL, TrackBarX, TrackBarY + 30, 0, 0, SWP_NOSIZE);
+        SetWindowPos(TBGreen->mLabel, NULL, TrackBarX - 30, TrackBarY + 35, 0, 0, SWP_NOSIZE);
+
+        SetWindowPos(TBBlue->mWindow, NULL, TrackBarX, TrackBarY + 60, 0, 0, SWP_NOSIZE);
+        SetWindowPos(TBBlue->mLabel, NULL, TrackBarX - 30, TrackBarY + 65, 0, 0, SWP_NOSIZE);
+    }
+
+    if (!InvalidateRect(hWnd, nullptr, TRUE))
+    {
+        MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
+    }
+
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -227,6 +363,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         hBrushBLUE = CreateSolidBrush(RGB(0, 0, 255));
         hBrushGREEN = CreateSolidBrush(RGB(0, 255, 0));
     }
+    case WM_GETMINMAXINFO:
+    {
+        MINMAXINFO* pMinMax = (MINMAXINFO*)lParam;
+
+        // Set minimum and maximum tracking sizes
+        pMinMax->ptMinTrackSize.x = MIN_WIDTH;
+        pMinMax->ptMinTrackSize.y = MIN_HEIGHT;
+        pMinMax->ptMaxTrackSize.x = MAX_WIDTH;
+        pMinMax->ptMaxTrackSize.y = MAX_HEIGHT;
+        break;
+    }
+    case WM_SIZING:
+    {
+        UpdatePositions(hWnd);
+    }
+    break;
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
@@ -266,6 +418,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (LOWORD(wParam) == 7)
             {
                 image->SaveImage(hWnd);
+            }
+            if (LOWORD(wParam) == 8)
+            {
+                image->displayMasc = !image->displayMasc;
+                if (!InvalidateRect(hWnd, nullptr, TRUE))
+                {
+                    MessageBox(hWnd, L"Failed to invalidate user window", L"Load Error", MB_ICONERROR | MB_OK);
+                }
             }
             switch (wmId)
             {
@@ -307,25 +467,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_HSCROLL:
         {
-            red = image->redMasc;
-            green = image->greenMasc;
-            blue = image->blueMasc;
+            if (MyImage::GetInstance()->mImage != nullptr)
+            {
+                red = image->redMasc;
+                green = image->greenMasc;
+                blue = image->blueMasc;
 
-            if ((HWND)lParam == TBRed->mWindow)
-            {
-                red = UpdateTrackbarValue(TBRed);
+                if ((HWND)lParam == TBRed->mWindow)
+                {
+                    red = UpdateTrackbarValue(TBRed);
+                }
+                if ((HWND)lParam == TBGreen->mWindow)
+                {
+                    green = UpdateTrackbarValue(TBGreen);
+                }
+                if ((HWND)lParam == TBBlue->mWindow)
+                {
+                    blue = UpdateTrackbarValue(TBBlue);
+                }
+
+                image->SetMascColors(red, green, blue);
+                image->SetMasc(hWnd);
+                image->SetEditLimit(EditMessage);
             }
-            if ((HWND)lParam == TBGreen->mWindow)
-            {
-                green = UpdateTrackbarValue(TBGreen);
-            }
-            if ((HWND)lParam == TBBlue->mWindow)
-            {
-                blue = UpdateTrackbarValue(TBBlue);
-            }
-            image->SetMascColors(red, green, blue);
-            image->SetMasc(hWnd);
-            image->SetEditLimit(EditMessage);
         }
         break;
     case WM_PAINT:
@@ -336,9 +500,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 Pen pen(Color(255, 0, 0, 0), 5);
                 Graphics graphics(hdc);
+                HBRUSH hBrush = CreateSolidBrush(RGB(10, 0, 30)); // Alice blue
+                FillRect(hdc, &ps.rcPaint, hBrush);
+                DeleteObject(hBrush);
                 graphics.SetInterpolationMode(InterpolationModeNearestNeighbor);
-                graphics.DrawRectangle(&pen, *image->mRect);
-                graphics.DrawImage(image->mImage, *image->mRect);
+                if (image->displayMasc)
+                {
+                    graphics.DrawImage(image->mMasquedImage, *image->mRect);
+                }
+                else
+                {
+                    graphics.DrawImage(image->mImage, *image->mRect);
+                }
             }
             EndPaint(hWnd, &ps);
         }

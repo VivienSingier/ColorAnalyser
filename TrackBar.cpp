@@ -15,6 +15,6 @@ TrackBar::TrackBar(int x, int y, HWND hWnd)
     mLabel = CreateWindowEx(
         0, TEXT("STATIC"), TEXT("122"),
         WS_CHILD | WS_VISIBLE,
-        x - 30, y + 5, 300, 20,
+        x - 30, y + 5, 30, 20,
         hWnd, NULL, GetModuleHandle(NULL), NULL);
 }
